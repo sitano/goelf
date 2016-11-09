@@ -1,5 +1,6 @@
 # goelf
-Golang related ELF CLI tool
+
+Golang specific ELF reader/parser CLI tool
 
 ## Usage
 
