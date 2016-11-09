@@ -6,6 +6,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"github.com/olekukonko/tablewriter"
+	"golang.org/x/debug/elf"
 )
 
 var filename = flag.StringP("filename", "f", "", "Path to the elf binary")
@@ -145,11 +146,18 @@ func (p *Process) PrintSymbols() {
 	}
 
 	for _, s := range sym {
+		section := ""
+		if s.Section == elf.SHN_UNDEF || s.Section >= elf.SHN_LORESERVE {
+			section = fmt.Sprintf("%v", s.Section)
+		} else {
+			section = fmt.Sprintf("%d", int(s.Section))
+		}
+
 		table.Append([]string{
 			s.Name,
 			fmt.Sprintf("0x%x", s.Info),
 			fmt.Sprintf("0x%x", s.Other),
-			fmt.Sprintf("%v", s.Section),
+			fmt.Sprintf("%v", section),
 			fmt.Sprintf("0x%x", s.Value),
 			fmt.Sprintf("%d", s.Size),
 		})
