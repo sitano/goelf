@@ -1,0 +1,37 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "yf185lmVPcvXjLZuPT1s4JzxI18=",
+			"path": "github.com/mattn/go-runewidth",
+			"revision": "737072b4e32b7a5018b4a7125da8d12de90e8045",
+			"revisionTime": "2016-10-12T01:35:12Z"
+		},
+		{
+			"checksumSHA1": "0KQQY1f4p/HmCQE7HjdgesEoe3Y=",
+			"path": "github.com/olekukonko/tablewriter",
+			"revision": "bdcc175572fd7abece6c831e643891b9331bc9e7",
+			"revisionTime": "2016-09-23T12:54:01Z"
+		},
+		{
+			"checksumSHA1": "GxPD7A0NjMDom1xte0mghkpzr0E=",
+			"path": "github.com/spf13/pflag",
+			"revision": "5ccb023bc27df288a957c5e994cd44fd19619465",
+			"revisionTime": "2016-10-24T13:13:51Z"
+		},
+		{
+			"checksumSHA1": "RyTK4sEzp8KSHefm19dNu9RwSPk=",
+			"path": "golang.org/x/debug/dwarf",
+			"revision": "fb508927b491eca48a708e9d000fdb7afa53c32b",
+			"revisionTime": "2016-06-20T05:56:39Z"
+		},
+		{
+			"checksumSHA1": "5JXTMMuoY4EdM6DuFwqO6VuLqqg=",
+			"path": "golang.org/x/debug/elf",
+			"revision": "fb508927b491eca48a708e9d000fdb7afa53c32b",
+			"revisionTime": "2016-06-20T05:56:39Z"
+		}
+	],
+	"rootPath": "github.com/sitano/goelf"
+}
