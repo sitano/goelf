@@ -10,10 +10,11 @@ import (
 
 var filename = flag.StringP("filename", "f", "", "Path to the elf binary")
 var all = flag.BoolP("all", "a", false, "Print all available information")
-var header = flag.Bool("header", false, "Print all header")
-var sections = flag.Bool("sections", false, "Print all sections")
-var symbols = flag.Bool("symbols", false, "Print all symbols")
-var progs = flag.Bool("progs", false, "Print all progs")
+var header = flag.Bool("header", false, "Print header")
+var sections = flag.Bool("sections", false, "Print sections")
+var symbols = flag.Bool("symbols", false, "Print symbols")
+var imports = flag.Bool("imports", false, "Print imports")
+var progs = flag.Bool("progs", false, "Print progs")
 
 func main() {
 	flag.Parse()
@@ -39,6 +40,10 @@ func main() {
 
 	if *all || *progs {
 		p.PrintProgs()
+	}
+
+	if *all || *imports {
+		p.PrintImports()
 	}
 
 	if *all || *symbols {
@@ -149,6 +154,51 @@ func (p *Process) PrintSymbols() {
 			fmt.Sprintf("%d", s.Size),
 		})
 	}
+
+	table.Render()
+	fmt.Println()
+}
+
+func (p *Process) PrintImports() {
+	isym, err := p.efd.ImportedSymbols()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading .dynsym", err)
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Imported Symbols", "Version", "Library",
+	})
+	table.SetBorder(false)
+	table.SetAutoWrapText(true)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+
+	for _, s := range isym {
+		table.Append([]string{
+			s.Name,
+			s.Version,
+			s.Library,
+		})
+	}
+
+	table.Render()
+	fmt.Println()
+
+	libs, err := p.efd.ImportedLibraries()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading .needed", err)
+	}
+
+	table = tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Library"})
+	table.SetBorder(false)
+	table.SetAutoWrapText(true)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+
+	for _, l := range libs {
+		table.Append([]string{l})
+	}
+
 	table.Render()
 	fmt.Println()
 }
