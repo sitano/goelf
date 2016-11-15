@@ -7,6 +7,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/olekukonko/tablewriter"
 	"golang.org/x/debug/elf"
+	elf2 "github.com/sitano/goelf/elf"
 )
 
 var filename = flag.StringP("filename", "f", "", "Path to the elf binary")
@@ -16,6 +17,7 @@ var sections = flag.Bool("sections", false, "Print sections")
 var symbols = flag.Bool("symbols", false, "Print symbols")
 var imports = flag.Bool("imports", false, "Print imports")
 var progs = flag.Bool("progs", false, "Print progs")
+var notes = flag.Bool("notes", false, "Print notes")
 
 func main() {
 	flag.Parse()
@@ -45,6 +47,10 @@ func main() {
 
 	if *all || *imports {
 		p.PrintImports()
+	}
+
+	if *all || *notes {
+		p.PrintNotes()
 	}
 
 	if *all || *symbols {
@@ -205,6 +211,47 @@ func (p *Process) PrintImports() {
 
 	for _, l := range libs {
 		table.Append([]string{l})
+	}
+
+	table.Render()
+	fmt.Println()
+}
+
+func (p *Process) PrintNotes() {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Note", "Type", "Size", "Data",
+	})
+	table.SetBorder(false)
+	table.SetAutoWrapText(true)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+
+	s := p.efd.SectionByType(elf.SHT_NOTE)
+	if s == nil {
+		fmt.Fprintln(os.Stderr, "Error searching for note (7) section")
+	}
+
+	notes, err := elf2.ReadNotes(s, p.efd.ByteOrder)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading", s.Name, ":", err)
+	}
+
+	for _, n := range notes {
+		typeString := fmt.Sprintf("%v", n.Type)
+
+		data := "..."
+
+		if n.Name == "Go" && n.Type == elf2.NT_GO_BUILD {
+			typeString = "NT_GOBUILDID"
+			data = string(n.Data)
+		}
+
+		table.Append([]string{
+			n.Name,
+			typeString,
+			fmt.Sprintf("0x%x", len(n.Data)),
+			data,
+		})
 	}
 
 	table.Render()

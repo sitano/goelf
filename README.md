@@ -6,6 +6,18 @@ Golang specific ELF reader/parser CLI tool
 
     $ go build && ./goelf --all -f ./goelf
     
+## Getting Go build Id
+
+    $ go build && ./goelf --notes -f ./goelf
+
+      NOTE | TYPE |                   DATA                    
+    +------+------+------------------------------------------+
+      Go   | 4    | 945e761581e8443fa9fcff60164bd8ac37b20700
+      
+## Getting ELF Go compiler version
+
+    ...
+    
 ## Example output
 
     $ go build && ./goelf --all -f ./goelf                       
