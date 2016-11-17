@@ -5,8 +5,8 @@ import (
 )
 
 // http://lxr.free-electrons.com/source/arch/x86/include/asm/elf.h#L16
-type ELFGReg uint
+type ElfGReg uint
 
-const ELF_NGREG = unsafe.Sizeof(UserRegs{}) / unsafe.Sizeof(ELFGReg(0))
+const ELF_NGREG = unsafe.Sizeof(UserRegs{}) / unsafe.Sizeof(ElfGReg(0))
 
-type ELFGRegSet [ELF_NGREG]ELFGReg
+type ElfGRegSet [ELF_NGREG]ElfGReg

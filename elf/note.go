@@ -26,12 +26,12 @@ const (
 	* PTRACE_SETREGSET requests.
 	* http://lxr.free-electrons.com/source/include/uapi/linux/elf.h#L400
 	*/
-	NT_PRSTATUS	NoteType = 0x1
-	NT_PRFPREG	NoteType = 0x2
-	NT_PRPSINFO	NoteType = 0x3
-	NT_PRXREG	NoteType = 0x4
-	NT_PLATFORM	NoteType = 0x5
-	NT_AUXV		NoteType = 0x6
+	NT_PRSTATUS     NoteType = 0x1
+	NT_PRFPREG      NoteType = 0x2
+	NT_PRPSINFO     NoteType = 0x3
+	NT_PRXREG       NoteType = 0x4
+	NT_PLATFORM     NoteType = 0x5
+	NT_AUXV         NoteType = 0x6
 
 	NT_SIGINFO      NoteType = 0x53494749
 	NT_FILE         NoteType = 0x46494c45
