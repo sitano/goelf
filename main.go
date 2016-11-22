@@ -8,6 +8,8 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"golang.org/x/debug/elf"
 	elf2 "github.com/sitano/goelf/elf"
+	"reflect"
+	"strings"
 )
 
 var filename = flag.StringP("filename", "f", "", "Path to the elf binary")
@@ -18,6 +20,7 @@ var symbols = flag.Bool("symbols", false, "Print symbols")
 var imports = flag.Bool("imports", false, "Print imports")
 var progs = flag.Bool("progs", false, "Print progs")
 var notes = flag.Bool("notes", false, "Print notes")
+var note_prstatus = flag.Bool("note_prstatus", false, "Print prstatus note")
 
 func main() {
 	flag.Parse()
@@ -51,6 +54,10 @@ func main() {
 
 	if *all || *notes {
 		p.PrintNotes()
+	}
+
+	if *all || *note_prstatus {
+		p.PrintPRStatus()
 	}
 
 	if *all || *symbols {
@@ -258,3 +265,46 @@ func (p *Process) PrintNotes() {
 	fmt.Println()
 }
 
+func (p *Process) PrintPRStatus() {
+	s := p.efd.SectionByType(elf.SHT_NOTE)
+	if s == nil {
+		fmt.Fprintln(os.Stderr, "Error searching for note (7) section")
+	}
+
+	note, err := elf2.ReadNoteByType(s, p.efd.ByteOrder, elf2.NT_PRSTATUS)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading NT_PRSTATUS:", err)
+		return
+	}
+
+	prs, err := elf2.ReadPRStatus(note, p.efd.ByteOrder, p.efd.Class)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading NT_PRSTATUS:", err)
+		return
+	}
+
+	fmt.Println("PRSTATUS")
+	PrintStruct(*prs, 1)
+	fmt.Println()
+
+	fmt.Println("PRSTATUS.Regs")
+	PrintStruct(elf2.GetUserRegs(prs.PR_Reg), 1)
+	fmt.Println()
+}
+
+func PrintStruct(s interface{}, indent int) {
+	t := reflect.TypeOf(s)
+	v := reflect.ValueOf(s)
+
+	indentT := strings.Repeat("\t", indent)
+
+	fmt.Println("Struct", t.Name())
+	for i := 0; i < v.NumField(); i ++ {
+		if t.Field(i).Type.Kind() == reflect.Struct {
+			fmt.Printf("%s%s = ", indentT, t.Field(i).Name, )
+			PrintStruct(v.Field(i).Interface(), indent + 1)
+		} else {
+			fmt.Printf("%s%s = 0x%x\n", indentT, t.Field(i).Name, v.Field(i).Interface())
+		}
+	}
+}

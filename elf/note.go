@@ -7,6 +7,8 @@ import (
 	"golang.org/x/debug/elf"
 	"strings"
 	"strconv"
+	"bytes"
+	"errors"
 )
 
 type NoteType uint32
@@ -15,7 +17,12 @@ type Note struct {
 	Name string
 	Type NoteType
 	Data []byte
+
+	io.ReaderAt
 }
+
+// Open returns a new ReadSeeker reading the ELF section.
+func (n *Note) Open() io.ReadSeeker { return io.NewSectionReader(bytes.NewReader(n.Data), 0, int64(len(n.Data))) }
 
 const (
 	NT_GO_BUILD	NoteType = 0x4
@@ -179,6 +186,60 @@ func ReadNotes(s *elf.Section, o binary.ByteOrder) ([]*Note, error) {
 	}
 
 	return notes, nil
+}
+
+func ReadNoteByType(s *elf.Section, o binary.ByteOrder, search NoteType) (*Note, error) {
+	if s.Type != elf.SHT_NOTE {
+		return nil, fmt.Errorf("invalid section type: %v/%v", s.Name, s.Type)
+	}
+
+	note := &Note{}
+
+	r := s.Open()
+	for {
+		var namesize, descsize int32
+		err := binary.Read(r, o, &namesize)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("read namesize failed: %v", err)
+		}
+
+		err = binary.Read(r, o, &descsize)
+		if err != nil {
+			return nil, fmt.Errorf("read descsize failed: %v", err)
+		}
+
+		err = binary.Read(r, o, &note.Type)
+		if err != nil {
+			return nil, fmt.Errorf("read type failed: %v", err)
+		}
+
+		if note.Type != search {
+			sz := int64(namesize + descsize)
+			full := (sz + 3) &^ 3
+			_, _ = r.Seek(full, io.SeekCurrent)
+
+			continue
+		}
+		// END
+
+		if name, err := readAligned4(r, namesize); err != nil {
+			return nil, fmt.Errorf("read name failed: %v", err)
+		} else {
+			note.Name = strings.TrimRight(string(name), "\x00")
+		}
+
+		note.Data, err = readAligned4(r, descsize)
+		if err != nil {
+			return nil, fmt.Errorf("read desc failed: %v", err)
+		}
+
+		return note, nil
+	}
+
+	return nil, errors.New("not found")
 }
 
 // Copyright 2015 The Go Authors. All rights reserved.

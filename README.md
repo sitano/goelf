@@ -4,11 +4,11 @@ Golang specific ELF reader/parser CLI tool
 
 ## Usage
 
-    $ go build && ./goelf --all -f ./goelf
+    $ goelf --all -f ./goelf
     
 ## Getting Go build Id
 
-    $ go build && ./goelf --notes -f ./goelf
+    $ goelf --notes -f ./goelf
 
       NOTE | TYPE |                   DATA                    
     +------+------+------------------------------------------+
@@ -18,9 +18,13 @@ Golang specific ELF reader/parser CLI tool
 
     ...
     
+## Getting coredump registers
+
+    $ goelf --note_prstatus -f ./core
+
 ## Example output
 
-    $ go build && ./goelf --all -f ./goelf                       
+    $ goelf --all -f ./goelf                       
     
         CLASS    |    DATA     |  VERSION   |     OSABI     | ABIVERSION |  BYTEORDER   |  TYPE   |  MACHINE  |  ENTRY    
     +------------+-------------+------------+---------------+------------+--------------+---------+-----------+----------+

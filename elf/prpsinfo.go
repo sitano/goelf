@@ -2,10 +2,10 @@ package elf
 
 const ELF_PRARGSZ = 80 /* Number of chars for args */
 
-type KernelUid uint
-type KernelGid uint
+type KernelUid uint16
+type KernelGid uint16
 
-type KernelPid int
+type KernelPid uint32
 
 // Linux kernel data sizes: https://static.lwn.net/images/pdf/LDD3/ch11.pdf
 // http://lxr.free-electrons.com/source/include/uapi/linux/elfcore.h#L78
