@@ -28,23 +28,24 @@ type ElfSigInfo struct {
   * http://lxr.free-electrons.com/source/include/uapi/linux/elfcore.h#L36
   * https://llvm.org/svn/llvm-project/lldb/trunk/source/Plugins/Process/elf-core/ProcessElfCore.cpp
   */
-type ElfPRStatus struct {
-	Info      ElfSigInfo /* Info associated with signal */
-	CurSig    int16      /* Current signal */
-	SigPend   uint       /* Set of pending signals */
-	SigHold   uint       /* Set of held signals */
+type PRStatus struct {
+	Info    ElfSigInfo /* Info associated with signal */
 
-	PID       KernelPid
-	PPID      KernelPid
-	PGRP      KernelPid
-	SID       KernelPid
+	CurSig  int16      /* Current signal */
+	SigPend uint       /* Set of pending signals */
+	SigHold uint       /* Set of held signals */
 
-	PR_UTime  TimeVal    /* User time */
-	PR_STime  TimeVal    /* System time */
-	PR_CUTime TimeVal    /* Cumulative user time */
-	PR_CSTime TimeVal    /* Cumulative system time */
+	PID     KernelPid
+	PPID    KernelPid
+	PGRP    KernelPid
+	SID     KernelPid
 
-	PR_Reg    ElfGRegSet /* GP registers */
+	UTime   TimeVal    /* User time */
+	STime   TimeVal    /* System time */
+	CUTime  TimeVal    /* Cumulative user time */
+	CSTime  TimeVal    /* Cumulative system time */
+
+	Regs    ElfGRegSet /* GP registers */
 }
 
 func GetUserRegs(set ElfGRegSet) UserRegs {
@@ -69,12 +70,12 @@ func GetUserRegs(set ElfGRegSet) UserRegs {
 	return r
 }
 
-func ReadKernelPid(r io.Reader, o binary.ByteOrder, c elf.Class) (KernelPid, error) {
-	x, err := ReadInt(r, o, c)
+func ReadKernelPid(r io.Reader, o binary.ByteOrder) (KernelPid, error) {
+	x, err := readInt(r, o, elf.ELFCLASS32)
 	return KernelPid(x), err
 }
 
-func ReadInt(r io.Reader, o binary.ByteOrder, c elf.Class) (int, error) {
+func readInt(r io.Reader, o binary.ByteOrder, c elf.Class) (int, error) {
 	if c == elf.ELFCLASS64 {
 		var x int64
 		err := binary.Read(r, o, &x)
@@ -88,7 +89,7 @@ func ReadInt(r io.Reader, o binary.ByteOrder, c elf.Class) (int, error) {
 	}
 }
 
-func ReadUInt(r io.Reader, o binary.ByteOrder, c elf.Class) (uint, error) {
+func readUInt(r io.Reader, o binary.ByteOrder, c elf.Class) (uint, error) {
 	if c == elf.ELFCLASS64 {
 		var x uint64
 		err := binary.Read(r, o, &x)
@@ -102,13 +103,13 @@ func ReadUInt(r io.Reader, o binary.ByteOrder, c elf.Class) (uint, error) {
 	}
 }
 
-func ReadPRStatus(n *Note, o binary.ByteOrder, c elf.Class) (*ElfPRStatus, error) {
+func ReadPRStatus(n *Note, o binary.ByteOrder, c elf.Class) (*PRStatus, error) {
 	if n.Type != NT_PRSTATUS {
 		return nil, fmt.Errorf("invalid note type: %v", n)
 	}
 
 	var err error
-	prs := &ElfPRStatus{}
+	prs := &PRStatus{}
 
 	r := n.Open()
 
@@ -122,57 +123,56 @@ func ReadPRStatus(n *Note, o binary.ByteOrder, c elf.Class) (*ElfPRStatus, error
 		return nil, fmt.Errorf("read err failed: %v", err)
 	}
 
-	// Aligned 4
 	if err = binary.Read(r, o, &prs.CurSig); err != nil {
 		return nil, fmt.Errorf("read cursig failed: %v", err)
 	}
 	r.Seek(2, io.SeekCurrent)
 
-	if prs.SigPend, err = ReadUInt(r, o, c); err != nil {
+	if prs.SigPend, err = readUInt(r, o, c); err != nil {
 		return nil, fmt.Errorf("read sigpend failed: %v", err)
 	}
-	if prs.SigHold, err = ReadUInt(r, o, c); err != nil {
+	if prs.SigHold, err = readUInt(r, o, c); err != nil {
 		return nil, fmt.Errorf("read sighold failed: %v", err)
 	}
 
-	if prs.PID, err = ReadKernelPid(r, o, elf.ELFCLASS32); err != nil {
+	if prs.PID, err = ReadKernelPid(r, o); err != nil {
 		return nil, fmt.Errorf("read pid failed: %v", err)
 	}
-	if prs.PPID, err = ReadKernelPid(r, o, elf.ELFCLASS32); err != nil {
+	if prs.PPID, err = ReadKernelPid(r, o); err != nil {
 		return nil, fmt.Errorf("read ppid failed: %v", err)
 	}
-	if prs.PGRP, err = ReadKernelPid(r, o, elf.ELFCLASS32); err != nil {
+	if prs.PGRP, err = ReadKernelPid(r, o); err != nil {
 		return nil, fmt.Errorf("read pgrp failed: %v", err)
 	}
-	if prs.SID, err = ReadKernelPid(r, o, elf.ELFCLASS32); err != nil {
+	if prs.SID, err = ReadKernelPid(r, o); err != nil {
 		return nil, fmt.Errorf("read sid failed: %v", err)
 	}
 
-	if err = binary.Read(r, o, &prs.PR_UTime.Sec); err != nil {
+	if err = binary.Read(r, o, &prs.UTime.Sec); err != nil {
 		return nil, fmt.Errorf("read utime.sec failed: %v", err)
 	}
-	if err = binary.Read(r, o, &prs.PR_UTime.USec); err != nil {
+	if err = binary.Read(r, o, &prs.UTime.USec); err != nil {
 		return nil, fmt.Errorf("read utime.usec failed: %v", err)
 	}
 
-	if err = binary.Read(r, o, &prs.PR_STime.Sec); err != nil {
+	if err = binary.Read(r, o, &prs.STime.Sec); err != nil {
 		return nil, fmt.Errorf("read stime.sec failed: %v", err)
 	}
-	if err = binary.Read(r, o, &prs.PR_STime.USec); err != nil {
+	if err = binary.Read(r, o, &prs.STime.USec); err != nil {
 		return nil, fmt.Errorf("read stime.usec failed: %v", err)
 	}
 
-	if err = binary.Read(r, o, &prs.PR_CUTime.Sec); err != nil {
+	if err = binary.Read(r, o, &prs.CUTime.Sec); err != nil {
 		return nil, fmt.Errorf("read cutime.sec failed: %v", err)
 	}
-	if err = binary.Read(r, o, &prs.PR_CUTime.USec); err != nil {
+	if err = binary.Read(r, o, &prs.CUTime.USec); err != nil {
 		return nil, fmt.Errorf("read cutime.usec failed: %v", err)
 	}
 
-	if err = binary.Read(r, o, &prs.PR_CSTime.Sec); err != nil {
+	if err = binary.Read(r, o, &prs.CSTime.Sec); err != nil {
 		return nil, fmt.Errorf("read cstime.sec failed: %v", err)
 	}
-	if err = binary.Read(r, o, &prs.PR_CSTime.USec); err != nil {
+	if err = binary.Read(r, o, &prs.CSTime.USec); err != nil {
 		return nil, fmt.Errorf("read cstime.usec failed: %v", err)
 	}
 
@@ -182,7 +182,7 @@ func ReadPRStatus(n *Note, o binary.ByteOrder, c elf.Class) (*ElfPRStatus, error
 			if err := binary.Read(r, o, &x); err != nil {
 				return nil, fmt.Errorf("read %d/%d reg failed: %v", 1 + i, ELF_NGREG, err)
 			}
-			prs.PR_Reg[i] = ElfGReg(x)
+			prs.Regs[i] = ElfGReg(x)
 		}
 	} else if c == elf.ELFCLASS32 {
 		for i := uintptr(0); i < ELF_NGREG; i ++ {
@@ -190,7 +190,7 @@ func ReadPRStatus(n *Note, o binary.ByteOrder, c elf.Class) (*ElfPRStatus, error
 			if err := binary.Read(r, o, &x); err != nil {
 				return nil, fmt.Errorf("read %d/%d reg failed: %v", 1 + i, ELF_NGREG, err)
 			}
-			prs.PR_Reg[i] = ElfGReg(x)
+			prs.Regs[i] = ElfGReg(x)
 		}
 	} else {
 		return nil, errors.New("unknown elf class")

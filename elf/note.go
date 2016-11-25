@@ -228,7 +228,7 @@ func ReadNoteByType(s *elf.Section, o binary.ByteOrder, search NoteType) (*Note,
 		if name, err := readAligned4(r, namesize); err != nil {
 			return nil, fmt.Errorf("read name failed: %v", err)
 		} else {
-			note.Name = strings.TrimRight(string(name), "\x00")
+			note.Name = strings.Trim(string(name), "\x00")
 		}
 
 		note.Data, err = readAligned4(r, descsize)

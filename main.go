@@ -21,6 +21,7 @@ var imports = flag.Bool("imports", false, "Print imports")
 var progs = flag.Bool("progs", false, "Print progs")
 var notes = flag.Bool("notes", false, "Print notes")
 var note_prstatus = flag.Bool("note_prstatus", false, "Print prstatus note")
+var note_prpsinfo = flag.Bool("note_prpsinfo", false, "Print prpsinfo note")
 
 func main() {
 	flag.Parse()
@@ -58,6 +59,10 @@ func main() {
 
 	if *all || *note_prstatus {
 		p.PrintPRStatus()
+	}
+
+	if *all || *note_prpsinfo {
+		p.PrintPRPSInfo()
 	}
 
 	if *all || *symbols {
@@ -283,12 +288,32 @@ func (p *Process) PrintPRStatus() {
 		return
 	}
 
-	fmt.Println("PRSTATUS")
 	PrintStruct(*prs, 1)
 	fmt.Println()
 
-	fmt.Println("PRSTATUS.Regs")
-	PrintStruct(elf2.GetUserRegs(prs.PR_Reg), 1)
+	PrintStruct(elf2.GetUserRegs(prs.Regs), 1)
+	fmt.Println()
+}
+
+func (p *Process) PrintPRPSInfo() {
+	s := p.efd.SectionByType(elf.SHT_NOTE)
+	if s == nil {
+		fmt.Fprintln(os.Stderr, "Error searching for note (7) section")
+	}
+
+	note, err := elf2.ReadNoteByType(s, p.efd.ByteOrder, elf2.NT_PRPSINFO)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading NT_PRPSINFO:", err)
+		return
+	}
+
+	prps, err := elf2.ReadPRPSInfo(note, p.efd.ByteOrder, p.efd.Class)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading NT_PRPSINFO:", err)
+		return
+	}
+
+	PrintStruct(*prps, 1)
 	fmt.Println()
 }
 
@@ -296,15 +321,20 @@ func PrintStruct(s interface{}, indent int) {
 	t := reflect.TypeOf(s)
 	v := reflect.ValueOf(s)
 
-	indentT := strings.Repeat("\t", indent)
+	ind := strings.Repeat("\t", indent)
 
 	fmt.Println("Struct", t.Name())
 	for i := 0; i < v.NumField(); i ++ {
-		if t.Field(i).Type.Kind() == reflect.Struct {
-			fmt.Printf("%s%s = ", indentT, t.Field(i).Name, )
+		tf := t.Field(i)
+		vf := v.Field(i)
+		fn := tf.Name
+		ft := tf.Type
+
+		if ft.Kind() == reflect.Struct {
+			fmt.Printf("%s%s = ", ind, fn)
 			PrintStruct(v.Field(i).Interface(), indent + 1)
 		} else {
-			fmt.Printf("%s%s = 0x%x\n", indentT, t.Field(i).Name, v.Field(i).Interface())
+			fmt.Printf("%s%s = 0x%x (%v)\n", ind, fn, vf.Interface(), vf.Interface())
 		}
 	}
 }
